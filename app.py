@@ -21,7 +21,7 @@ authenticator = stauth.Authenticate(
 )
 
 # Login no "main" (a versão atual da biblioteca aceita "main" novamente)
-name, authentication_status, username = authenticator.login("Login", "main")
+name, authentication_status, username = authenticator.login("Login", "sidebar")
 
 # ==============================================================
 # APP PRINCIPAL
