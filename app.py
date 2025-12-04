@@ -39,7 +39,7 @@ city_to_id = {
     'Estremoz': '1210837',
     'Lamego': '1210655',
     'Mafra': '1210747',
-    'Santa Margarida da Coutada': '1210800',
+    'Santa Margarida da Coutada': '1210735',
     'São Jacinto': '1210704',
     'Tavira': '1210883',
     'Tomar': '1210724',
