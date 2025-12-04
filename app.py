@@ -10,14 +10,12 @@ import streamlit_authenticator as stauth
 # Configuração de login usando st.secrets (para deployment seguro)
 credentials = dict(st.secrets['credentials'])  # Copia para dict mutável
 cookie = dict(st.secrets['cookie'])
-pre_authorized = dict(st.secrets['preauthorized']) if 'preauthorized' in st.secrets else {}
 
 authenticator = stauth.Authenticate(
     credentials,
     cookie['name'],
     cookie['key'],
-    cookie['expiry_days'],
-    pre_authorized
+    cookie['expiry_days']
 )
 
 login_result = authenticator.login(key='Login')
