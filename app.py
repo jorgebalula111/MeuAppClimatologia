@@ -8,11 +8,16 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 
 # Configuração de login usando st.secrets (para deployment seguro)
+credentials = dict(st.secrets['credentials'])  # Copia para dict mutável
+cookie = dict(st.secrets['cookie'])
+preauthorized = dict(st.secrets['preauthorized']) if 'preauthorized' in st.secrets else {}
+
 authenticator = stauth.Authenticate(
-    st.secrets['credentials'],
-    st.secrets['cookie']['name'],
-    st.secrets['cookie']['key'],
-    st.secrets['cookie']['expiry_days'],
+    credentials,
+    cookie['name'],
+    cookie['key'],
+    cookie['expiry_days'],
+    preauthorized
 )
 
 login_result = authenticator.login(key='Login')
