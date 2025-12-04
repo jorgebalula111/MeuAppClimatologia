@@ -6,16 +6,19 @@ import requests
 import yaml
 from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
+import copy  # Adicionado para deep copy
 
 # Configuração de login usando st.secrets (para deployment seguro)
-credentials = dict(st.secrets['credentials'])  # Copia para dict mutável
+credentials = copy.deepcopy(dict(st.secrets['credentials']))  # Deep copy para mutável completo
 cookie = dict(st.secrets['cookie'])
+preauthorized = dict(st.secrets['preauthorized']) if 'preauthorized' in st.secrets else {}
 
 authenticator = stauth.Authenticate(
     credentials,
     cookie['name'],
     cookie['key'],
-    cookie['expiry_days']
+    cookie['expiry_days'],
+    preauthorized
 )
 
 login_result = authenticator.login(key='Login')
