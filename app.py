@@ -70,6 +70,7 @@ if st.session_state["authentication_status"]:
         'Vila Real': '1240566', # Vila Real (Cidade)
         'Vendas Novas': '1210840',  # Vendas Novas
         'Alcochete': '5210758', # Alcochete / Campo Tiro
+        'Sesimbra': '1210770',  # Adicionado: Marco do Grilo, Sesimbra (usando ID de Setúbal, estação próxima)
         # Adicione mais da "Locais" com IDs correspondentes (consulte https://api.ipma.pt/open-data/observation/meteorology/stations/stations.json para matches)
         # Ex.: Se "Albufeira" não match exato, ignore ou mapeie para próximo como "Faro"
     }
