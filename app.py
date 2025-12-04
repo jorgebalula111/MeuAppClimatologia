@@ -3,23 +3,22 @@ import pandas as pd
 import numpy as np
 import math
 import requests
-import yaml
-from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
-import copy  # Adicionado para deep copy
 
-# Configuração de login usando st.secrets (para deployment seguro)
-credentials = copy.deepcopy(dict(st.secrets['credentials']))  # Deep copy para mutável completo
-cookie = dict(st.secrets['cookie'])
-preauthorized = dict(st.secrets['preauthorized']) if 'preauthorized' in st.secrets else {}
+# ====== AUTENTICAÇÃO CORRIGIDA (funciona no Streamlit Cloud) ======
+# Conversão simples para dicionário normal — sem copy, sem deepcopy
+credentials   = dict(st.secrets["credentials"])
+cookie        = dict(st.secrets["cookie"])
+preauthorized = dict(st.secrets.get("preauthorized", {}))
 
 authenticator = stauth.Authenticate(
     credentials,
-    cookie['name'],
-    cookie['key'],
-    cookie['expiry_days'],
+    cookie["name"],
+    cookie["key"],
+    cookie["expiry_days"],
     preauthorized
 )
+# ===================================================================
 
 login_result = authenticator.login(key='Login')
 if login_result is not None:
