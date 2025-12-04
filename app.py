@@ -5,37 +5,32 @@ import math
 import requests
 import streamlit_authenticator as stauth
 
-# --------------------------------------------------------------
-# AUTENTICAÇÃO CORRIGIDA (funciona no Streamlit Cloud)
-# --------------------------------------------------------------
-# Conversão simples para dicionário normal (sem copy/deepcopy)
+# ==============================================================
+# AUTENTICAÇÃO – versão final que funciona no Streamlit Cloud
+# ==============================================================
+# Conversão simples (sem copy/deepcopy) – evita recursão infinita
 credentials   = dict(st.secrets["credentials"])
 cookie        = dict(st.secrets["cookie"])
-# preauthorized foi REMOVIDO completamente (parâmetro depreciado na versão atual da biblioteca)
 
+# Criar o autenticador (sem parâmetros depreciados)
 authenticator = stauth.Authenticate(
     credentials,
     cookie["name"],
     cookie["key"],
     cookie["expiry_days"]
-    # <-- não passamos mais nenhum parâmetro aqui
 )
 
-# --------------------------------------------------------------
-# LOGIN
-# --------------------------------------------------------------
-name, authentication_status, username = authenticator.login("Login", "main")
+# Login na sidebar (o "main" já não é aceite na versão atual da biblioteca)
+name, authentication_status, username = authenticator.login("Login", "sidebar")
 
+# ==============================================================
+# APP PRINCIPAL
+# ==============================================================
 if st.session_state["authentication_status"]:
-    authenticator.logout("Logout", "main")
+    authenticator.logout("Logout", "sidebar")
     st.write(f"Bem-vindo *{name}*")
 
-    # ==================== RESTO DO TEU APP ====================
-
-    # Carregar cidades da folha "Locais" do Excel
-    locais_df = pd.read_excel('Climatologia_8.xlsx', sheet_name='Locais', header=None)
-    cidades_permitidas = sorted(locais_df[0].dropna().unique().tolist())
-
+    # ---------------------- DADOS E FUNÇÕES ----------------------
     city_to_id = {
         'Portimão': '1210878',
         'Lisboa': '1200535',
@@ -72,7 +67,7 @@ if st.session_state["authentication_status"]:
         'Vila Real': '1240566',
         'Vendas Novas': '1210840',
         'Alcochete': '5210758',
-        'Sesimbra': '1210770',  # Marco do Grilo, usa estação de Setúbal
+        'Sesimbra': '1210770',  # Marco do Grilo (usa estação de Setúbal)
     }
 
     cidades_disponiveis = sorted(city_to_id.keys())
@@ -89,7 +84,7 @@ if st.session_state["authentication_status"]:
     tabela_iv['tm'] = pd.to_numeric(tabela_iv['tm'], errors='coerce')
     tabela_iv['tv'] = pd.to_numeric(tabela_iv['tv'], errors='coerce')
 
-    # Funções auxiliares (mantidas exatamente como tinhas)
+    # Funções auxiliares
     def stull_wet_bulb(T, RH):
         import math
         tw = T * math.atan(0.151977 * (RH + 8.313659)**0.5) + math.atan(T + RH) - math.atan(RH - 1.676331) + 0.00391838 * RH**1.5 * math.atan(0.023101 * RH) - 4.686035
@@ -99,50 +94,50 @@ if st.session_state["authentication_status"]:
         url = "https://api.ipma.pt/open-data/observation/meteorology/stations/observations.json"
         response = requests.get(url)
         if response.status_code != 200:
-            st.error(f"Erro na API IPMA: Código {response.status_code}")
+            st.error(f"Erro API IPMA: {response.status_code}")
             return None, None, None
         data = response.json()
         timestamps = sorted(data.keys(), reverse=True)
         for ts in timestamps:
-            if station_id in data[ts] and data[ts][station_id] is not None:
+            if station_id in data[ts] and data[ts][station_id]:
                 obs = data[ts][station_id]
                 try:
                     T = float(obs['temperatura'])
                     RH = float(obs['humidade'])
-                    pressure = float(obs['pressao'])
+                    pressure = float(obs.get('pressao', 1013))
                     if pressure == -99.0:
-                        st.warning("Pressão ausente na API (-99.0 hPa). Usando valor padrão de 1013 hPa.")
+                        st.warning("Pressão ausente (-99.0 hPa). Usando 1013 hPa.")
                         pressure = 1013.0
                     return T, RH, pressure
-                except KeyError:
+                except (KeyError, ValueError):
                     continue
-        st.warning(f"Nenhuma observação recente para {station_id}")
+        st.warning("Sem dados recentes para esta estação.")
         return None, None, None
 
-    def get_P(ts, delta, tabela_iii):
+    def get_P(ts, delta, tabela):
         ts_r = round(ts)
         delta_r = round(delta)
-        row = tabela_iii.loc[ts_r] if ts_r in tabela_iii.index else tabela_iii.iloc[(tabela_iii.index - ts_r).abs().argmin()]
+        row = tabela.loc[ts_r] if ts_r in tabela.index else tabela.iloc[(tabela.index - ts_r).abs().argmin()]
         return row[delta_r] if delta_r in row.index else row.iloc[(row.index - delta_r).abs().argmin()]
 
-    def get_tv_tl(P, tabela_iiibis):
-        row = tabela_iiibis.iloc[(tabela_iiibis['P'] - P).abs().argsort()[:1]]
+    def get_tv_tl(P, tabela):
+        row = tabela.iloc[(tabela['P'] - P).abs().argsort()[:1]]
         return row['tv'].values[0], row['tl'].values[0]
 
-    def get_tv_classB(ts_F, tm_F, tabela_iv):
-        clean = tabela_iv.dropna(subset=['ts', 'tm', 'tv'])
+    def get_tv_classB(ts_F, tm_F, tabela):
+        clean = tabela.dropna(subset=['ts', 'tm', 'tv'])
         row = clean.iloc[((clean['ts'] - ts_F).abs() + (clean['tm'] - tm_F).abs()).argsort()[:1]]
         return row['tv'].values[0] if not row.empty else None
 
-    # Interface
+    # ---------------------- INTERFACE ----------------------
     st.title("Climatologia Aplicada a Paióis")
+
     cidade = st.selectbox("Cidade", cidades_disponiveis)
     ti = st.number_input("Temperatura Interior do Paiol (°C)", value=20.0)
     classe = st.selectbox("Classe do Paiol", ["A", "B"])
 
     if st.button("Calcular"):
-        station_id = city_to_id[cidade]
-        T, RH, pressure = get_ipma_data(station_id)
+        T, RH, pressure = get_ipma_data(city_to_id[cidade])
         if T is not None:
             tm = stull_wet_bulb(T, RH)
             delta = T - tm
@@ -152,34 +147,32 @@ if st.session_state["authentication_status"]:
                 st.write(f"ts arredondado = {ts_rounded}ºC")
                 st.write(f"ts-tm = {round(delta)}ºC")
                 P = get_P(ts_rounded, round(delta), tabela_iii)
-                st.write(f"Peso em gramas (g/m³) = {P}")
+                st.write(f"Peso (g/m³) = {P}")
                 if P:
                     tv, tl = get_tv_tl(P, tabela_iiibis)
                     if ti >= tv:
-                        resultado = "ti ≥ tv – Ventilar sempre que possível"
+                        res = "Ventilar sempre que possível"
                     elif tv > ti >= tl:
-                        resultado = "tv > ti ≥ tl – Ventilar rapidamente"
+                        res = "Ventilar rapidamente"
                     else:
-                        resultado = "tl > ti – Manter fechado"
+                        res = "Manter fechado"
                 else:
-                    resultado = "Fora da tabela"
+                    res = "Fora da tabela"
             else:
                 ts_F = ts_rounded * 9/5 + 32
                 tm_F = round(tm) * 9/5 + 32
                 tv_F = get_tv_classB(round(ts_F), round(tm_F), tabela_iv)
-                st.write(f"ts arredondado = {round(ts_F)}ºF")
-                st.write(f"tm = {round(tm_F)}ºF")
-                st.write(f"tv = {tv_F}ºF" if tv_F else "tv = Fora da tabela")
+                st.write(f"ts = {round(ts_F)}ºF | tm = {round(tm_F)}ºF | tv = {tv_F if tv_F else 'N/D'}ºF")
                 if tv_F:
                     tv_c = (tv_F - 32) * 5/9
-                    resultado = "ti > tv – Ventilar" if ti > tv_c else "ti ≤ tv – Manter fechado"
+                    res = "Ventilar" if ti > tv_c else "Manter fechado"
                 else:
-                    resultado = "Fora da tabela"
+                    res = "Fora da tabela"
 
-            st.success(f"Resultado: {resultado}")
-            st.write(f"Dados: T={T}°C, RH={RH}%, Pressão={pressure}hPa, tm={tm:.2f}°C")
+            st.success(f"Resultado: {res}")
+            st.write(f"Dados: T={T}°C | RH={RH}% | P={pressure}hPa | tm={tm:.2f}°C")
 
 elif st.session_state["authentication_status"] is False:
-    st.error('Username/password incorreto')
+    st.error("Username/password incorreto")
 elif st.session_state["authentication_status"] is None:
-    st.warning('Por favor insira username e password')
+    st.warning("Por favor insira username e password")
