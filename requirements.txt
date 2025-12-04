@@ -3,5 +3,5 @@ pandas
 numpy
 requests
 pyyaml
-streamlit-authenticator
+streamlit-authenticator>=0.3.5  # Force latest compatible version
 openpyxl
