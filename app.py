@@ -128,11 +128,11 @@ if st.button("Calcular"):
             if P:
                 tv, tl = get_tv_tl(P, tabela_iiibis)
                 if ti >= tv:
-                    res = "Ventilar sempre que possível"
+                    res = "ti ≥ tv – O paiol deve ser ventilado durante todo o tempo em que as condições atmosféricas o permitam"
                 elif tv > ti >= tl:
-                    res = "Ventilar rapidamente"
+                    res = "tv > ti ≥ tl – O paiol deve ser ventilado rapidamente, apenas durante o tempo estritamente necessário para lançar uma corrente de ar que renove o ar interior"
                 else:
-                    res = "Manter fechado"
+                    res = "tl > ti – O paiol deve manter-se fechado."
             else:
                 res = "Fora da tabela"
         else:
@@ -142,7 +142,7 @@ if st.button("Calcular"):
             st.write(f"ts = {round(ts_F)}ºF | tm = {round(tm_F)}ºF | tv = {tv_F if tv_F else 'N/D'}ºF")
             if tv_F:
                 tv_c = (tv_F - 32) * 5/9
-                res = "Ventilar" if ti > tv_c else "Manter fechado"
+                res = "ti > tv – ventilar" if ti > tv_c else "ti < tv - manter fechado"
             else:
                 res = "Fora da tabela"
 
