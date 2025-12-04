@@ -2,6 +2,5 @@ streamlit
 pandas
 numpy
 requests
-pyyaml
-streamlit-authenticator>=0.3.5  # Force latest compatible version
+streamlit-authenticator==0.2.1  # Force stable version to avoid ValueError
 openpyxl
