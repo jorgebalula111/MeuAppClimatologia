@@ -6,13 +6,13 @@ import requests
 import streamlit_authenticator as stauth
 
 # ==============================================================
-# AUTENTICAÇÃO – versão final que funciona no Streamlit Cloud
+# AUTENTICAÇÃO – versão 100% compatível com Streamlit Cloud (v0.4.2)
 # ==============================================================
-# Conversão simples e segura (sem copy/deepcopy)
+# Conversão simples e segura – evita recursão infinita
 credentials   = dict(st.secrets["credentials"])
 cookie        = dict(st.secrets["cookie"])
 
-# Criar autenticador (sem parâmetros depreciados)
+# Criar o autenticador (sem parâmetros depreciados)
 authenticator = stauth.Authenticate(
     credentials,
     cookie["name"],
@@ -20,14 +20,14 @@ authenticator = stauth.Authenticate(
     cookie["expiry_days"]
 )
 
-# Login no "main" (a versão atual da biblioteca aceita "main" novamente)
-name, authentication_status, username = authenticator.login("Login", "sidebar")
+# Login usando keyword arguments (resolve o ValueError)
+name, authentication_status, username = authenticator.login(key="Login", location="main")
 
 # ==============================================================
 # APP PRINCIPAL
 # ==============================================================
 if st.session_state["authentication_status"]:
-    authenticator.logout("Logout", "sidebar")
+    authenticator.logout(key="Logout", location="sidebar")
     st.write(f"Bem-vindo *{name}*")
 
     # ---------------------- CIDADES ----------------------
@@ -67,7 +67,7 @@ if st.session_state["authentication_status"]:
         'Vila Real': '1240566',
         'Vendas Novas': '1210840',
         'Alcochete': '5210758',
-        'Sesimbra': '1210770',  # Marco do Grilo
+        'Sesimbra': '1210770',  # Marco do Grilo (usa estação de Setúbal)
     }
 
     cidades_disponiveis = sorted(city_to_id.keys())
