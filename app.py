@@ -8,11 +8,11 @@ import streamlit_authenticator as stauth
 # ==============================================================
 # AUTENTICAÇÃO – versão final que funciona no Streamlit Cloud
 # ==============================================================
-# Conversão simples (sem copy/deepcopy) – evita recursão infinita
+# Conversão simples e segura (sem copy/deepcopy)
 credentials   = dict(st.secrets["credentials"])
 cookie        = dict(st.secrets["cookie"])
 
-# Criar o autenticador (sem parâmetros depreciados)
+# Criar autenticador (sem parâmetros depreciados)
 authenticator = stauth.Authenticate(
     credentials,
     cookie["name"],
@@ -20,8 +20,8 @@ authenticator = stauth.Authenticate(
     cookie["expiry_days"]
 )
 
-# Login na sidebar (o "main" já não é aceite na versão atual da biblioteca)
-name, authentication_status, username = authenticator.login("Login", "sidebar")
+# Login no "main" (a versão atual da biblioteca aceita "main" novamente)
+name, authentication_status, username = authenticator.login("Login", "main")
 
 # ==============================================================
 # APP PRINCIPAL
@@ -30,7 +30,7 @@ if st.session_state["authentication_status"]:
     authenticator.logout("Logout", "sidebar")
     st.write(f"Bem-vindo *{name}*")
 
-    # ---------------------- DADOS E FUNÇÕES ----------------------
+    # ---------------------- CIDADES ----------------------
     city_to_id = {
         'Portimão': '1210878',
         'Lisboa': '1200535',
@@ -67,12 +67,12 @@ if st.session_state["authentication_status"]:
         'Vila Real': '1240566',
         'Vendas Novas': '1210840',
         'Alcochete': '5210758',
-        'Sesimbra': '1210770',  # Marco do Grilo (usa estação de Setúbal)
+        'Sesimbra': '1210770',  # Marco do Grilo
     }
 
     cidades_disponiveis = sorted(city_to_id.keys())
 
-    # Carregar tabelas
+    # ---------------------- TABELAS ----------------------
     tabela_iii = pd.read_csv('tabela_iii.csv', skiprows=1, index_col=0, encoding='utf-8-sig')
     tabela_iii.index = pd.to_numeric(tabela_iii.index, errors='coerce')
     tabela_iii.columns = pd.to_numeric(tabela_iii.columns)
@@ -84,7 +84,7 @@ if st.session_state["authentication_status"]:
     tabela_iv['tm'] = pd.to_numeric(tabela_iv['tm'], errors='coerce')
     tabela_iv['tv'] = pd.to_numeric(tabela_iv['tv'], errors='coerce')
 
-    # Funções auxiliares
+    # ---------------------- FUNÇÕES ----------------------
     def stull_wet_bulb(T, RH):
         import math
         tw = T * math.atan(0.151977 * (RH + 8.313659)**0.5) + math.atan(T + RH) - math.atan(RH - 1.676331) + 0.00391838 * RH**1.5 * math.atan(0.023101 * RH) - 4.686035
@@ -97,8 +97,7 @@ if st.session_state["authentication_status"]:
             st.error(f"Erro API IPMA: {response.status_code}")
             return None, None, None
         data = response.json()
-        timestamps = sorted(data.keys(), reverse=True)
-        for ts in timestamps:
+        for ts in sorted(data.keys(), reverse=True):
             if station_id in data[ts] and data[ts][station_id]:
                 obs = data[ts][station_id]
                 try:
@@ -106,12 +105,12 @@ if st.session_state["authentication_status"]:
                     RH = float(obs['humidade'])
                     pressure = float(obs.get('pressao', 1013))
                     if pressure == -99.0:
-                        st.warning("Pressão ausente (-99.0 hPa). Usando 1013 hPa.")
+                        st.warning("Pressão ausente → usando 1013 hPa")
                         pressure = 1013.0
                     return T, RH, pressure
                 except (KeyError, ValueError):
                     continue
-        st.warning("Sem dados recentes para esta estação.")
+        st.warning("Sem dados recentes")
         return None, None, None
 
     def get_P(ts, delta, tabela):
@@ -131,9 +130,8 @@ if st.session_state["authentication_status"]:
 
     # ---------------------- INTERFACE ----------------------
     st.title("Climatologia Aplicada a Paióis")
-
     cidade = st.selectbox("Cidade", cidades_disponiveis)
-    ti = st.number_input("Temperatura Interior do Paiol (°C)", value=20.0)
+    ti = st.number_input("Temperatura Interior (°C)", value=20.0)
     classe = st.selectbox("Classe do Paiol", ["A", "B"])
 
     if st.button("Calcular"):
@@ -144,10 +142,9 @@ if st.session_state["authentication_status"]:
             ts_rounded = round(T)
 
             if classe == "A":
-                st.write(f"ts arredondado = {ts_rounded}ºC")
-                st.write(f"ts-tm = {round(delta)}ºC")
+                st.write(f"ts arredondado = {ts_rounded}ºC | delta = {round(delta)}ºC")
                 P = get_P(ts_rounded, round(delta), tabela_iii)
-                st.write(f"Peso (g/m³) = {P}")
+                st.write(f"P = {P} g/m³")
                 if P:
                     tv, tl = get_tv_tl(P, tabela_iiibis)
                     if ti >= tv:
@@ -170,9 +167,9 @@ if st.session_state["authentication_status"]:
                     res = "Fora da tabela"
 
             st.success(f"Resultado: {res}")
-            st.write(f"Dados: T={T}°C | RH={RH}% | P={pressure}hPa | tm={tm:.2f}°C")
+            st.write(f"T={T}°C | RH={RH}% | P={pressure}hPa | tm={tm:.2f}°C")
 
 elif st.session_state["authentication_status"] is False:
-    st.error("Username/password incorreto")
+    st.error("Username ou password incorretos")
 elif st.session_state["authentication_status"] is None:
-    st.warning("Por favor insira username e password")
+    st.warning("Por favor faça login")
