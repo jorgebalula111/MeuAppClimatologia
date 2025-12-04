@@ -1,5 +1,0 @@
-cd C:\Users\Jorge Balula\Desktop\MeuAppClimatologia
-
-venv\Scripts\activate
-
-streamlit run app.py
